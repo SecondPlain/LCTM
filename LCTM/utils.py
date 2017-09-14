@@ -3,7 +3,8 @@ import numpy as np
 import os
 import scipy
 import scipy.io as sio
-import cv2
+#import cv2
+from skimage import io as skio
 from numba import jit, int64
 
 plt.rcParams['figure.figsize'] = [10.,10.]
@@ -155,9 +156,12 @@ def load_images(uris, rez_im, uri_data):
 	# Load images for CNN
 	X = np.empty((len(uris), 3, rez_im, rez_im), dtype=np.float32)
 	for i, x in enumerate(uris):
-		im = cv2.imread(uri_data+x)
-		im = cv2.resize(im, (rez_im, rez_im))
-		X[i] = im.T
+                # WARNING: untested
+                im = skio.imread(uri_data + x)
+                im = np.resize(im, (rez_im, rez_im))
+		#im = cv2.imread(uri_data+x)
+		#im = cv2.resize(im, (rez_im, rez_im))
+                X[i] = im.T
 	return X
 
 def check_images_available(x_uri, y, uri_data):
