@@ -10,7 +10,7 @@ class CorePotential:
     def cost_fcn(self, model, X, Y):
         pass
     def compute(self, model, X, score):
-        pass                
+        pass
 
 # -----------------------------------------
 class class_prior(CorePotential):
@@ -34,7 +34,7 @@ def temporal_cost(cost, Yi, length):
     idxs = np.linspace(0, length-1, T).astype(np.int)
     for t in range(T):
         cost[Yi[t], idxs[t]] += 1
-    return cost    
+    return cost
 
 @jit("float64[:,:](float64[:,:], float64[:,:], int64)")
 def temporal_compute(score, ws, length):

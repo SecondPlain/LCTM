@@ -10,7 +10,7 @@ class CorePotential:
     def cost_fcn(self, model, X, Y):
         pass
     def compute(self, model, X, score):
-        pass                
+        pass
 
 # -----------------------------------------
 class pretrained_unary(CorePotential):

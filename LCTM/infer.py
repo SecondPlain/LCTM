@@ -117,7 +117,7 @@ def segmental_forward_normalized(x, max_segs, pw=None):
 	# Set nonzero entries to 0 for visualization
 	scores[np.isinf(scores)] = 0
 
-	return scores	
+	return scores
 
 
 def sparsify_incoming_pw(pw):

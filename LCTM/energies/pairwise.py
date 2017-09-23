@@ -1,7 +1,11 @@
 import numpy as np
 from numba import float64, jit, int16, int32, int64
 
+import logging
+
 from LCTM import utils
+
+logger = logging.getLogger(__name__)
 
 class CorePotential:
     def __init__(self, name=""):
@@ -23,12 +27,14 @@ def pw_cost(Yi, n_classes, skip=1):
     cost /= T-skip
     return cost
 
+
 def segmental_pw_cost(Yi, n_classes, skip=1):
     Yi_ = utils.segment_labels(Yi)
     return pw_cost(Yi_, n_classes, skip)
 
+
 @jit("float64[:,:](float64[:,:], float64[:,:], int32)")
-def compute_pw(scores, ws, skip=1): 
+def compute_pw(scores, ws, skip=1):
     T = scores.shape[1]
     # Forward step
     for t in range(skip, T):
@@ -36,7 +42,7 @@ def compute_pw(scores, ws, skip=1):
         scores[:,t] += ws[prev_class]
     
     # Backward step
-    for t in range(T-skip, -1, -1):
+    for t in range(T-1-skip, -1, -1):
         prev_class = scores[:,t+skip].argmax()
         scores[:,t] += ws[:,prev_class]
 

@@ -1,11 +1,17 @@
 import numpy as np
 from numba import jit, float64, int64
 from copy import deepcopy
+import logging
 
 from LCTM import weights
 
+
+logger = logging.getLogger(__name__)
+
+
 def hamming_loss(Yi, Y_truth):
     return np.sum(Yi!=Y_truth).astype(np.float)
+
 
 def objective_01(model, Yi, Y_truth):
     return np.sum(Yi!=Y_truth).astype(np.float)
@@ -20,8 +26,8 @@ def compute_costs(model, Xi, Yi):
         costs[key] += model.potentials[key].cost_fcn(model, Xi, Yi)
     return costs
 
+
 def compute_ssvm_gradient(model, Xi, Yi, cost_truth=None, C=1.):
-    
     # Predict states
     if model.is_latent:
         Zi = predict_best_latent(model, Xi, Yi)
@@ -38,9 +44,11 @@ def compute_ssvm_gradient(model, Xi, Yi, cost_truth=None, C=1.):
 
     return w_diff
 
+
 def reduce_latent_states(score, n_latent, n_classes):
     score = score.reshape([n_classes, n_latent, -1])
     return score.max(1)
+
 
 @jit("int64[:](float64[:,:], int64[:], int64)")
 def predict_best_latent_(score, Yi, n_latent):
@@ -54,6 +62,7 @@ def predict_best_latent_(score, Yi, n_latent):
         path[t] = Yi[t]*n_latent + best_latent
 
     return path
+
 
 def predict_best_latent(model, Xi, Yi):
     n_timesteps = Xi.shape[1]
@@ -77,6 +86,7 @@ def loss_augmented_unaries(score, Yi):
         score[Yi[t],t] -= 1
 
     return score
+
 
 @jit("float64[:,:](float64[:,:], int64[:], int64)")
 def latent_loss_augmented_unaries(score, Yi, n_latent):

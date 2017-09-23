@@ -2,6 +2,7 @@ import os
 import numpy as np
 from collections import OrderedDict
 from functools import reduce
+import logging
 
 import sklearn.metrics as sm
 import scipy.ndimage as nd
@@ -17,10 +18,14 @@ from LCTM import learn
 from LCTM import ssvm
 
 
+logger = logging.getLogger(__name__)
+
+
 class Logger:
     # Log objective values for visualization
     def __init__(self):
         self.objectives = {}
+
 
 class CoreModel:
     name = ""
@@ -28,7 +33,7 @@ class CoreModel:
 
     # Model
     n_classes = None
-    n_features = None    
+    n_features = None
     inference_type = "framewise"
 
     # Learning
@@ -37,16 +42,16 @@ class CoreModel:
     objective = ssvm.objective_01
 
     # TODO: Add other regularlizers
-    regularizer = "" 
+    regularizer = ""
 
     def __init__(model, name="", debug=False, inference="framewise"):
         model.name = name
-        model.debug = debug        
+        model.debug = debug
         model.inference_type = inference
 
         model.potentials = OrderedDict()
         model.ws = weights.Weights()
-        model.logger = Logger()        
+        model.logger = Logger()
 
         assert inference in ["framewise", "segmental"], \
             "'inference' must be framewise or segmental"
@@ -166,7 +171,7 @@ class CoreModel:
                 else:
                     path = segmental_inference(score.T, model.max_segs, normalized=normalized)
 
-        return path 
+        return path
 
 
 class CoreLatentModel(CoreModel):
@@ -174,6 +179,7 @@ class CoreLatentModel(CoreModel):
     def __init__(self, n_latent, **kwargs):
         CoreModel.__init__(self, **kwargs)
         self.n_latent = n_latent
+
 
 class ChainModel(CoreModel):
     def __init__(self, skip=1, **kwargs):
@@ -210,6 +216,7 @@ class LatentChainModel(CoreLatentModel):
         # if skip: self.potentials["pw2"] = pw.pairwise("pw2", skip*2)
         if skip: self.potentials["pw"] = pw.pairwise(skip, name="pw")
 
+
 class LatentConvModel(CoreModel):
     def __init__(self, n_latent, conv_len=100, skip=1, prior=False, **kwargs):
         CoreLatentModel.__init__(self, n_latent, name="Latent Convolutional Model", **kwargs)
@@ -217,6 +224,7 @@ class LatentConvModel(CoreModel):
         if prior: self.potentials["temporal_prior"] = priors.temporal_prior(length=30)
         self.potentials["conv"] = unary.conv_unary(conv_len=conv_len)
         if skip: self.potentials["pw"] = pw.pairwise(skip, name="pw")
+
 
 class SegmentalModel(CoreModel):
     def __init__(self, pretrained=False, prior=0, pairwise=True, **kwargs):
@@ -226,6 +234,7 @@ class SegmentalModel(CoreModel):
         if pretrained: self.potentials["pre"] = unary.pretrained_unary()
         else: self.potentials["unary"] = unary.framewise_unary()
         if pairwise: self.potentials["seg_pw"] = pw.segmental_pairwise(name="seg_pw")
+
 
 class PretrainedModel(CoreModel):
     def __init__(self, skip=0, prior=0, segmental=False, **kwargs):
