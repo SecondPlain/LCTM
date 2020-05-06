@@ -1,12 +1,8 @@
-import os
 import numpy as np
 from collections import OrderedDict
-from functools import reduce
 import logging
 
-import sklearn.metrics as sm
 import scipy.ndimage as nd
-import matplotlib.pylab as plt
 
 from LCTM import weights
 from LCTM.energies import priors
@@ -66,9 +62,10 @@ class CoreModel:
 
     @property
     def n_nodes(model):
-        # Check how many latent notes there are (number of classes x number of latent states per class)
+        # Check how many latent notes there are (number of classes x number of
+        # latent states per class)
         if model.is_latent:
-            n_nodes = model.n_classes*model.n_latent
+            n_nodes = model.n_classes * model.n_latent
         else:
             n_nodes = model.n_classes
         return n_nodes
@@ -85,8 +82,9 @@ class CoreModel:
         return model.predict(Xi, output_latent=True)
 
     def decision_function(model, Xi):
-        # Compute the score for each timestep. This computes all potentials but does not compute the best label for eachl
-        if type(Xi) is list:
+        # Compute the score for each timestep. This computes all potentials but
+        # does not compute the best label for each
+        if isinstance(Xi, list) or isinstance(Xi, tuple):
             return [model.decision_function(Xi[i]) for i in range(len(Xi))]
 
         # Check that Xi is of size FxT
@@ -109,14 +107,17 @@ class CoreModel:
 
         return score
 
-
-    def predict(model, Xi, Yi=None, is_training=False, output_latent=False, inference=None, known_order=None):
+    def predict(
+            model, Xi, Yi=None, is_training=False, output_latent=False,
+            inference=None, known_order=None):
         # Compute the best label for each timesteo
-        if type(Xi) is list:
+        if isinstance(Xi, list) or isinstance(Xi, tuple):
             out = []
             for i in range(len(Xi)):
                 Yi_ = None if Yi is None else Yi[i]
-                out += [model.predict(Xi[i], Yi_, is_training, output_latent, inference, known_order)]
+                out += [model.predict(
+                    Xi[i], Yi_, is_training, output_latent, inference, known_order
+                )]
             return out
 
         # Check that Xi is of size FxT
@@ -124,7 +125,8 @@ class CoreModel:
             Xi = Xi.T
 
         if Yi is not None:
-            assert Xi.shape[1]==Yi.shape[0], "Error: Xi and Yi are of shapes {} and {}".format(Xi.shape[1],Yi.shape[0])
+            err_str = "Error: Xi and Yi are of shapes {} and {}".format(Xi.shape[1], Yi.shape[0])
+            assert Xi.shape[1] == Yi.shape[0], err_str
 
         _, n_timesteps = Xi.shape
         n_nodes = model.n_nodes
@@ -148,10 +150,9 @@ class CoreModel:
 
         # Get predictions
         inference_type = inference if inference is not None else model.inference_type
-        if inference_type is "framewise":
+        if inference_type == "framewise":
             path = score.argmax(0)
-
-        elif inference_type is "filtered":
+        elif inference_type == "filtered":
             assert hasattr(model, "filter_len"), "filter_len must be set"
             path = score.argmax(0)
             path = nd.median_filter(path, model.filter_len)
@@ -159,15 +160,20 @@ class CoreModel:
         elif "segmental" in inference_type:
             normalized = True if "normalized" in inference_type else False
 
-
             if known_order is not None:
                 path = infer_known_ordering(score.T, known_order)
             else:
                 assert hasattr(model, "max_segs"), "max_segs must be set"
                 # Check if there is a segmental pw.pairwise term
-                seg_term = [p.name for p in model.potentials.values() if type(p) is pw.segmental_pairwise]                
+                seg_term = [
+                    p.name for p in model.potentials.values()
+                    if type(p) is pw.segmental_pairwise
+                ]
                 if len(seg_term) >= 1:
-                    path = segmental_inference(score.T, model.max_segs, pw=model.ws[seg_term[0]], normalized=normalized)
+                    path = segmental_inference(
+                        score.T, model.max_segs,
+                        pw=model.ws[seg_term[0]], normalized=normalized
+                    )
                 else:
                     path = segmental_inference(score.T, model.max_segs, normalized=normalized)
 
@@ -176,6 +182,7 @@ class CoreModel:
 
 class CoreLatentModel(CoreModel):
     n_latent = 1
+
     def __init__(self, n_latent, **kwargs):
         CoreModel.__init__(self, **kwargs)
         self.n_latent = n_latent
@@ -188,61 +195,74 @@ class ChainModel(CoreModel):
         # self.potentials["class_prior"] = class_prior()
         # self.potentials["prior.temporal_prior"] = prior.temporal_prior(length=30)
         self.potentials["unary"] = unary.framewise_unary()
-        
+
         # self.potentials["pw2"] = pw.pairwise("pw2", skip*2)
-        if skip: self.potentials["pw"] = pw.pairwise(skip, name="pw")
+        if skip:
+            self.potentials["pw"] = pw.pairwise(skip, name="pw")
         # self.potentials["pw1"] = pw.pairwise("pw0", 1)
 
+
 class ConvModel(CoreModel):
-    def __init__(self, skip=1, conv_len=100, **kwargs):
+    def __init__(self, skip=1, conv_len=100, pw_segmental=False, **kwargs):
         CoreModel.__init__(self, name="Conv-Model", **kwargs)
-        self.debug = debug
 
         # self.potentials["prior.temporal_prior"] = prior.temporal_prior(length=30)
         self.potentials["conv"] = unary.conv_unary(conv_len=conv_len)
         # self.potentials["class_prior"] = class_prior()
         # self.potentials["pw2"] = pw.pairwise("pw2", skip*2)
-        if skip: self.potentials["pw"] = pw.pairwise(skip, name="pw")
+        if pw_segmental:
+            self.potentials["pw"] = pw.segmental_pairwise(name='pw')
+        elif skip:
+            self.potentials["pw"] = pw.pairwise(skip, name="pw")
         # if skip: self.potentials["pw0"] = pw.pairwise("pw0", 1)
+
 
 class LatentChainModel(CoreLatentModel):
     def __init__(self, n_latent, skip=1, **kwargs):
         # CoreLatentModel.__init__(self, n_latent, name="Latent Skip Chain Model", **kwargs)
-        super(CoreLatentModel,self).__init__(name="Latent Skip Chain Model", **kwargs)
+        super(CoreLatentModel, self).__init__(name="Latent Skip Chain Model", **kwargs)
 
         self.potentials["prior.temporal_prior"] = priors.temporal_prior(length=30)
         self.potentials["unary"] = unary.framewise_unary()
-        
+
         # if skip: self.potentials["pw2"] = pw.pairwise("pw2", skip*2)
-        if skip: self.potentials["pw"] = pw.pairwise(skip, name="pw")
+        if skip:
+            self.potentials["pw"] = pw.pairwise(skip, name="pw")
 
 
 class LatentConvModel(CoreModel):
     def __init__(self, n_latent, conv_len=100, skip=1, prior=False, **kwargs):
         CoreLatentModel.__init__(self, n_latent, name="Latent Convolutional Model", **kwargs)
 
-        if prior: self.potentials["temporal_prior"] = priors.temporal_prior(length=30)
+        if prior:
+            self.potentials["temporal_prior"] = priors.temporal_prior(length=30)
         self.potentials["conv"] = unary.conv_unary(conv_len=conv_len)
-        if skip: self.potentials["pw"] = pw.pairwise(skip, name="pw")
+        if skip:
+            self.potentials["pw"] = pw.pairwise(skip, name="pw")
 
 
 class SegmentalModel(CoreModel):
     def __init__(self, pretrained=False, prior=0, pairwise=True, **kwargs):
         CoreModel.__init__(self, name="Seg-Model", **kwargs)
 
-        if prior: self.potentials["prior"] = priors.temporal_prior(length=prior, name="prior")
-        if pretrained: self.potentials["pre"] = unary.pretrained_unary()
-        else: self.potentials["unary"] = unary.framewise_unary()
-        if pairwise: self.potentials["seg_pw"] = pw.segmental_pairwise(name="seg_pw")
+        if prior:
+            self.potentials["prior"] = priors.temporal_prior(length=prior, name="prior")
+        if pretrained:
+            self.potentials["pre"] = unary.pretrained_unary()
+        else:
+            self.potentials["unary"] = unary.framewise_unary()
+        if pairwise:
+            self.potentials["seg_pw"] = pw.segmental_pairwise(name="seg_pw")
 
 
 class PretrainedModel(CoreModel):
     def __init__(self, skip=0, prior=0, segmental=False, **kwargs):
         CoreModel.__init__(self, name="Pretrained-Model", **kwargs)
 
-        if prior: self.potentials["prior"] = priors.temporal_prior(length=prior, name="prior")
+        if prior:
+            self.potentials["prior"] = priors.temporal_prior(length=prior, name="prior")
         self.potentials["pre"] = unary.pretrained_unary()
-        if skip: self.potentials["pw"] = pw.pairwise(skip=skip)
-        if segmental: self.potentials["seg_pw"] = pw.segmental_pairwise(name="seg_pw")
-
-
+        if skip:
+            self.potentials["pw"] = pw.pairwise(skip=skip)
+        if segmental:
+            self.potentials["seg_pw"] = pw.segmental_pairwise(name="seg_pw")
