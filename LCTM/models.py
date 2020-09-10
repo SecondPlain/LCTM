@@ -256,7 +256,10 @@ class SegmentalModel(CoreModel):
 
 
 class PretrainedModel(CoreModel):
-    def __init__(self, skip=0, prior=0, segmental=False, **kwargs):
+    def __init__(
+            self, skip=0, prior=0,
+            segmental=False, start_prior=False, end_prior=False,
+            **kwargs):
         CoreModel.__init__(self, name="Pretrained-Model", **kwargs)
 
         if prior:
@@ -266,3 +269,7 @@ class PretrainedModel(CoreModel):
             self.potentials["pw"] = pw.pairwise(skip=skip)
         if segmental:
             self.potentials["seg_pw"] = pw.segmental_pairwise(name="seg_pw")
+        if start_prior:
+            self.potentials["start"] = priors.start_prior(name="start")
+        if end_prior:
+            self.potentials["end"] = priors.end_prior(name="end")

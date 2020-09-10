@@ -89,6 +89,7 @@ class start_prior(CorePotential):
         return cost
 
     def compute(self, model, Xi, score):
+        score[:, 0] += model.ws[self.name]
         return score
 
 
@@ -107,4 +108,5 @@ class end_prior(CorePotential):
         return cost
 
     def compute(self, model, Xi, score):
+        score[:, -1] += model.ws[self.name]
         return score
