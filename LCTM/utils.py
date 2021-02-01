@@ -6,7 +6,7 @@ import scipy.io as sio
 # import cv2
 from skimage import io as skio
 # from numba import jit, int64
-from numba import jit
+# from numba import jit
 
 plt.rcParams['figure.figsize'] = [10.,10.]
 
@@ -125,7 +125,7 @@ def segment_lengths(Yi):
     return np.array(interval_lens)
 
 
-@jit("int64[:](int64[:], int64)")
+# @jit("int64[:](int64[:], int64)")
 def partition_latent_labels(Yi, n_latent):
     if n_latent == 1:
         return Yi

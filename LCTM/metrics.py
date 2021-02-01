@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 # from numba import jit, int64, boolean
-from numba import jit
+# from numba import jit
 
 from LCTM import utils
 
@@ -88,7 +88,7 @@ def border_distance(P, Y, intervals=30, max_dur=None):
         return border_(P, Y, intervals, max_dur)
 
 
-@jit("float64(int64[:], int64[:], boolean)")
+# @jit("float64(int64[:], int64[:], boolean)")
 def levenstein_(p, y, norm=False):
     m_row = len(p)
     n_col = len(y)
@@ -117,7 +117,7 @@ def levenstein_(p, y, norm=False):
     return score
 
 
-@jit("float64(int64[:], int64[:], boolean)")
+# @jit("float64(int64[:], int64[:], boolean)")
 def lcs_(p, y, norm=False):
     m_row = len(p)
     n_col = len(y)
